@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Heroku buildpack detect script
+# This buildpack always applies - it prepares the shared folder for monorepo builds
+# It should always return 0 (success) and output the buildpack name
+
+echo "heroku-buildpack-monorepo-copy-shared"
+exit 0
