@@ -8,8 +8,30 @@ set -e
 # Get the buildpack's bin directory
 BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Note: BUILD_DIR will be auto-detected by prepare-shared script
-# by searching up the directory tree for the repository root
+# Heroku passes the build directory as the first argument to compile
+# This is where the git repository was cloned
+# $1 = build directory (where the app code is)
+# $2 = cache directory  
+# $3 = env directory
+
+BUILD_DIR="$1"
+
+# If $1 is not set or empty, try to find it
+if [ -z "$BUILD_DIR" ] || [ ! -d "$BUILD_DIR" ]; then
+  # Try to find /tmp/build_* directories
+  if ls -d /tmp/build_* 1>/dev/null 2>&1; then
+    BUILD_DIR="$(ls -td /tmp/build_* 2>/dev/null | head -1)"
+  else
+    BUILD_DIR="$(pwd)"
+  fi
+fi
+
+echo "       DEBUG: Build directory argument (\$1): $1"
+echo "       DEBUG: Resolved BUILD_DIR: $BUILD_DIR"
+echo "       DEBUG: Current working directory: $(pwd)"
+
+# Export BUILD_DIR so prepare-shared can use it
+export BUILD_DIR
 
 # Source the prepare-shared script if it exists
 if [ -f "$BIN_DIR/prepare-shared" ]; then
@@ -21,3 +43,4 @@ fi
 
 # Exit successfully - this buildpack just prepares the shared folder
 # The monorepo buildpack will handle the actual app copying
+
