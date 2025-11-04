@@ -11,30 +11,31 @@ set -e
 
 echo "-----> Preparing shared folder for monorepo buildpack"
 
-# Get the build directory (where Heroku cloned the git repo)
-# When buildpacks run, they're typically in the app directory
-# We need to find the root of the git repository where 'shared' and 'frontend' exist
+# BUILD_DIR is set by the compile script (from Heroku's $1 argument)
+# This is where Heroku cloned the git repository
+# If not set, try to detect it
 
-CURRENT_DIR="$(pwd)"
-
-# Try to find the repository root by looking for 'shared' and 'frontend' directories
-# Start from current directory and go up
-FOUND_ROOT=""
-SEARCH_DIR="$CURRENT_DIR"
-MAX_DEPTH=10
-DEPTH=0
-
-while [ $DEPTH -lt $MAX_DEPTH ] && [ "$SEARCH_DIR" != "/" ]; do
-  if [ -d "$SEARCH_DIR/shared" ] && [ -d "$SEARCH_DIR/frontend" ]; then
-    FOUND_ROOT="$SEARCH_DIR"
-    break
-  fi
-  SEARCH_DIR="$(dirname "$SEARCH_DIR")"
-  DEPTH=$((DEPTH + 1))
-done
-
-# Use the found root, or fall back to BUILD_DIR or current directory
-BUILD_DIR="${FOUND_ROOT:-${BUILD_DIR:-$CURRENT_DIR}}"
+if [ -z "$BUILD_DIR" ]; then
+  CURRENT_DIR="$(pwd)"
+  
+  # Try to find the repository root by looking for 'shared' and 'frontend' directories
+  # Start from current directory and go up
+  FOUND_ROOT=""
+  SEARCH_DIR="$CURRENT_DIR"
+  MAX_DEPTH=10
+  DEPTH=0
+  
+  while [ $DEPTH -lt $MAX_DEPTH ] && [ "$SEARCH_DIR" != "/" ]; do
+    if [ -d "$SEARCH_DIR/shared" ] && [ -d "$SEARCH_DIR/frontend" ]; then
+      FOUND_ROOT="$SEARCH_DIR"
+      break
+    fi
+    SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+    DEPTH=$((DEPTH + 1))
+  done
+  
+  BUILD_DIR="${FOUND_ROOT:-$CURRENT_DIR}"
+fi
 
 # Use absolute paths
 APP_DIR="$BUILD_DIR/frontend/apps/app"
