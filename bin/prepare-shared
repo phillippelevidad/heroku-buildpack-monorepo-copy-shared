@@ -4,16 +4,46 @@
 # It should be run BEFORE the monorepo buildpack
 # 
 # To use this as a buildpack:
-# 1. Create a git repo with this file and a bin/compile file
+# 1. Copy the contents of custom-buildpack/ to your buildpack repository
 # 2. Add it as the first buildpack before the monorepo one
 
 set -e
 
 echo "-----> Preparing shared folder for monorepo buildpack"
 
-APP_DIR="frontend/apps/app"
-SHARED_SOURCE="shared"
+# Get the build directory (where Heroku cloned the git repo)
+# When buildpacks run, they're typically in the app directory
+# We need to find the root of the git repository where 'shared' and 'frontend' exist
+
+CURRENT_DIR="$(pwd)"
+
+# Try to find the repository root by looking for 'shared' and 'frontend' directories
+# Start from current directory and go up
+FOUND_ROOT=""
+SEARCH_DIR="$CURRENT_DIR"
+MAX_DEPTH=10
+DEPTH=0
+
+while [ $DEPTH -lt $MAX_DEPTH ] && [ "$SEARCH_DIR" != "/" ]; do
+  if [ -d "$SEARCH_DIR/shared" ] && [ -d "$SEARCH_DIR/frontend" ]; then
+    FOUND_ROOT="$SEARCH_DIR"
+    break
+  fi
+  SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+  DEPTH=$((DEPTH + 1))
+done
+
+# Use the found root, or fall back to BUILD_DIR or current directory
+BUILD_DIR="${FOUND_ROOT:-${BUILD_DIR:-$CURRENT_DIR}}"
+
+# Use absolute paths
+APP_DIR="$BUILD_DIR/frontend/apps/app"
+SHARED_SOURCE="$BUILD_DIR/shared"
 SHARED_DEST="$APP_DIR/shared"
+
+echo "       Build directory: $BUILD_DIR"
+echo "       Checking for shared folder at: $SHARED_SOURCE"
+echo "       Checking for app directory at: $APP_DIR"
 
 # Check if shared folder exists at repo root and app directory exists
 if [ -d "$SHARED_SOURCE" ] && [ -d "$APP_DIR" ]; then
@@ -27,6 +57,10 @@ else
   echo "       WARNING: Shared folder or app directory not found"
   echo "       Shared source: $SHARED_SOURCE (exists: $([ -d "$SHARED_SOURCE" ] && echo 'yes' || echo 'no'))"
   echo "       App directory: $APP_DIR (exists: $([ -d "$APP_DIR" ] && echo 'yes' || echo 'no'))"
+  echo "       Current working directory: $(pwd)"
+  echo "       Listing build directory contents:"
+  ls -la "$BUILD_DIR" 2>/dev/null | head -20 || echo "       Cannot list build directory"
   # Don't fail - let the monorepo buildpack continue
   exit 0
 fi
+
