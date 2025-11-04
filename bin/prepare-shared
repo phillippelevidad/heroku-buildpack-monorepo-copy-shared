@@ -17,11 +17,13 @@ echo "-----> Preparing shared folder for monorepo buildpack"
 
 # APP_BASE is set via Heroku config vars (e.g., "frontend/apps/app" or "monolith")
 # This is the same variable used by the monorepo buildpack
+# The compile script should have loaded it from the env directory
 # If not set, exit with error
 if [ -z "$APP_BASE" ]; then
   echo "       ERROR: APP_BASE environment variable is not set"
-  echo "       Please set APP_BASE to the path to the app directory within the monorepo"
-  echo "       Example: APP_BASE=frontend/apps/app"
+  echo "       Please set APP_BASE as a Heroku config var to the path to the app directory within the monorepo"
+  echo "       Example: heroku config:set APP_BASE=frontend/apps/app"
+  echo "       Or: heroku config:set APP_BASE=monolith"
   exit 1
 fi
 
