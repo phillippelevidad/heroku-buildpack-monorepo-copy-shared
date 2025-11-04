@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script copies the shared folder into frontend/apps/app
+# This script copies the shared folder into APP_BASE
 # It should be run BEFORE the monorepo buildpack
 # 
 # To use this as a buildpack:
@@ -15,10 +15,20 @@ echo "-----> Preparing shared folder for monorepo buildpack"
 # This is where Heroku cloned the git repository
 # If not set, try to detect it
 
+# APP_BASE is set via Heroku config vars (e.g., "frontend/apps/app" or "monolith")
+# This is the same variable used by the monorepo buildpack
+# If not set, exit with error
+if [ -z "$APP_BASE" ]; then
+  echo "       ERROR: APP_BASE environment variable is not set"
+  echo "       Please set APP_BASE to the path to the app directory within the monorepo"
+  echo "       Example: APP_BASE=frontend/apps/app"
+  exit 1
+fi
+
 if [ -z "$BUILD_DIR" ]; then
   CURRENT_DIR="$(pwd)"
   
-  # Try to find the repository root by looking for 'shared' and 'frontend' directories
+  # Try to find the repository root by looking for 'shared' and the app directory
   # Start from current directory and go up
   FOUND_ROOT=""
   SEARCH_DIR="$CURRENT_DIR"
@@ -26,7 +36,8 @@ if [ -z "$BUILD_DIR" ]; then
   DEPTH=0
   
   while [ $DEPTH -lt $MAX_DEPTH ] && [ "$SEARCH_DIR" != "/" ]; do
-    if [ -d "$SEARCH_DIR/shared" ] && [ -d "$SEARCH_DIR/frontend" ]; then
+    # Check if this directory has both 'shared' and the app directory (APP_BASE)
+    if [ -d "$SEARCH_DIR/shared" ] && [ -d "$SEARCH_DIR/$APP_BASE" ]; then
       FOUND_ROOT="$SEARCH_DIR"
       break
     fi
@@ -38,11 +49,12 @@ if [ -z "$BUILD_DIR" ]; then
 fi
 
 # Use absolute paths
-APP_DIR="$BUILD_DIR/frontend/apps/app"
+APP_DIR="$BUILD_DIR/$APP_BASE"
 SHARED_SOURCE="$BUILD_DIR/shared"
 SHARED_DEST="$APP_DIR/shared"
 
 echo "       Build directory: $BUILD_DIR"
+echo "       App base path (APP_BASE): $APP_BASE"
 echo "       Checking for shared folder at: $SHARED_SOURCE"
 echo "       Checking for app directory at: $APP_DIR"
 
@@ -52,7 +64,7 @@ if [ -d "$SHARED_SOURCE" ] && [ -d "$APP_DIR" ]; then
   rm -rf "$SHARED_DEST" 2>/dev/null || true
   cp -r "$SHARED_SOURCE" "$SHARED_DEST"
   echo "       ✓ Shared folder copied successfully"
-  echo "       The monorepo buildpack will now copy $APP_DIR (with shared) to root"
+  echo "       The monorepo buildpack will now copy $APP_BASE (with shared) to root"
   exit 0
 else
   echo "       WARNING: Shared folder or app directory not found"
