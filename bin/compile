@@ -12,9 +12,10 @@ BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # This is where the git repository was cloned
 # $1 = build directory (where the app code is)
 # $2 = cache directory  
-# $3 = env directory
+# $3 = env directory (contains config vars as files)
 
 BUILD_DIR="$1"
+ENV_DIR="$3"
 
 # If $1 is not set or empty, try to find it
 if [ -z "$BUILD_DIR" ] || [ ! -d "$BUILD_DIR" ]; then
@@ -26,9 +27,23 @@ if [ -z "$BUILD_DIR" ] || [ ! -d "$BUILD_DIR" ]; then
   fi
 fi
 
+# Load environment variables from env directory if it exists
+if [ -n "$ENV_DIR" ] && [ -d "$ENV_DIR" ]; then
+  # Source all files in the env directory
+  for env_file in "$ENV_DIR"/*; do
+    if [ -f "$env_file" ]; then
+      # Read the value from the file and export it
+      var_name="$(basename "$env_file")"
+      var_value="$(cat "$env_file")"
+      export "$var_name=$var_value"
+    fi
+  done
+fi
+
 echo "       DEBUG: Build directory argument (\$1): $1"
 echo "       DEBUG: Resolved BUILD_DIR: $BUILD_DIR"
-echo "       DEBUG: Current working directory: $(pwd)"
+echo "       DEBUG: Env directory: $ENV_DIR"
+echo "       DEBUG: APP_BASE from env: ${APP_BASE:-not set}"
 
 # Export BUILD_DIR so prepare-shared can use it
 export BUILD_DIR
